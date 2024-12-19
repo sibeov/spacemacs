@@ -38,12 +38,13 @@ buffer you create. This function switches the current buffer
 view; to pop-up a full width buffer, use
 `spacemacs/projectile-shell-pop'."
   (interactive)
-  (call-interactively
-   (or (pcase shell-default-shell
-         ('multi-term #'projectile-multi-term-in-root)
-         ('eat #'eat-project))
-       (intern-soft (format "projectile-run-%s" shell-default-shell))
-       #'projectile-run-shell)))
+  (pcase shell-default-shell
+    ((or 'multi-term 'multi-vterm)
+     (projectile-with-default-dir (projectile-project-root)
+       (call-interactively shell-default-shell)))
+    ('eat (call-interactively #'eat-project))
+    (_ (call-interactively (or (intern-soft (format "projectile-run-%s" shell-default-shell))
+                               #'projectile-run-shell)))))
 
 (defun spacemacs/disable-hl-line-mode ()
   "Locally disable global-hl-line-mode"
@@ -119,11 +120,6 @@ SHELL is the SHELL function to use (i.e. when FUNC represents a terminal)."
        (shell-pop index)
        (spacemacs/resize-shell-to-desired-width))))
 
-(defun projectile-multi-term-in-root ()
-  "Invoke `multi-term' in the project's root."
-  (interactive)
-  (projectile-with-default-dir (projectile-project-root) (multi-term)))
-
 (defun spacemacs//toggle-shell-auto-completion-based-on-path ()
   "Deactivates automatic completion on remote paths.
 Retrieving completions for Eshell blocks Emacs. Over remote
@@ -173,8 +169,6 @@ is achieved by adding the relevant text properties."
             'spacemacs//eshell-auto-end nil t)
   (add-hook 'evil-hybrid-state-entry-hook
             'spacemacs//eshell-auto-end nil t)
-  (when (configuration-layer/package-used-p 'semantic)
-    (semantic-mode -1))
   ;; This is an eshell alias
   (defun eshell/clear ()
     (let ((inhibit-read-only t))
@@ -231,6 +225,25 @@ is achieved by adding the relevant text properties."
     "H" #'spacemacs/ivy-eshell-history)
   (define-key eshell-mode-map (kbd "M-l") #'spacemacs/ivy-eshell-history)
   (define-key eshell-mode-map (kbd "<tab>") #'spacemacs/pcomplete-std-complete))
+
+(defun spacemacs/consult-eshell-history ()
+  "Correctly revert to insert state after selection."
+  (interactive)
+  (consult-history)
+  (evil-insert-state))
+
+(defun spacemacs/consult-shell-history ()
+  "Correctly revert to insert state after selection."
+  (interactive)
+  (consult-history)
+  (evil-insert-state))
+
+(defun spacemacs/init-consult-eshell ()
+  "Initialize consult-eshell."
+  (spacemacs/set-leader-keys-for-major-mode 'eshell-mode
+    "H" 'spacemacs/consult-eshell-history)
+  (define-key eshell-mode-map
+              (kbd "M-l") 'spacemacs/consult-eshell-history))
 
 (defun term-send-tab ()
   "Send tab in term mode."

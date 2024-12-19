@@ -25,6 +25,7 @@
   '(
     (comint :location built-in)
     company
+    consult
     eat
     esh-help
     (eshell :location built-in)
@@ -158,6 +159,16 @@
   (spacemacs/set-leader-keys-for-major-mode 'shell-mode
     "H" 'counsel-shell-history))
 
+(defun shell/pre-init-consult ()
+  (spacemacs|use-package-add-hook consult
+    :post-init
+    (progn
+      ;; eshell
+      (add-hook 'eshell-mode-hook 'spacemacs/init-consult-eshell)
+      ;;shell
+      (spacemacs/set-leader-keys-for-major-mode 'shell-mode
+        "H" 'spacemacs/consult-shell-history))))
+
 (defun shell/pre-init-magit ()
   (spacemacs|use-package-add-hook magit
     :post-init
@@ -261,10 +272,6 @@
 (defun shell/init-term ()
   (spacemacs/register-repl 'term 'term)
   (spacemacs/register-repl 'term 'ansi-term)
-  (defun term-send-tab ()
-    "Send tab in term mode."
-    (interactive)
-    (term-send-raw-string "\t"))
 
   (when (eq dotspacemacs-editing-style 'vim)
     (evil-define-key 'insert term-raw-map
