@@ -157,13 +157,9 @@ ROOT-DIR should be the directory path for the environment, `nil' for clean up."
             (equal python-shell-interpreter spacemacs--python-shell-interpreter-origin))
     (if-let* ((default-directory root-dir))
         (if-let* ((ipython (cl-find-if 'spacemacs/pyenv-executable-find
-                                       '("ipython3" "ipython")))
-                  (version (replace-regexp-in-string
-                            "\\(\\.dev\\)?[\r\n|\n]$" ""
-                            (shell-command-to-string (format "\"%s\" --version" ipython)))))
+                                       '("ipython3" "ipython"))))
             (setq-local python-shell-interpreter ipython
-                        python-shell-interpreter-args
-                        (concat "-i" (unless (version< version "5") " --simple-prompt")))
+                        python-shell-interpreter-args "-i --simple-prompt")
           ;; else try python3 or python
           (setq-local python-shell-interpreter
                       (or (cl-find-if 'spacemacs/pyenv-executable-find
@@ -206,14 +202,21 @@ ROOT-DIR should be the path for the environemnt, `nil' for clean up"
                      ((spacemacs/pyenv-executable-find "python3.10") "breakpoint()")
                      ((spacemacs/pyenv-executable-find "python3.11") "breakpoint()")
                      (t "import pdb; pdb.set_trace()")))
+        (prev-line (save-excursion
+                     (and (zerop (forward-line -1))
+                          (thing-at-point 'line))))
         (line (thing-at-point 'line)))
-    (if (and line (string-match trace line))
-        (kill-whole-line)
-      (progn
-        (back-to-indentation)
-        (insert trace)
-        (insert "\n")
-        (python-indent-line)))))
+    (cond ((and line (string-search trace line))
+           (kill-whole-line)
+           (back-to-indentation))
+          ((and prev-line (string-search trace prev-line))
+           (forward-line -1)
+           (kill-whole-line)
+           (back-to-indentation))
+          (t
+           (back-to-indentation)
+           (insert trace ?\n)
+           (python-indent-line)))))
 
 ;; from https://www.snip2code.com/Snippet/127022/Emacs-auto-remove-unused-import-statemen
 (defun spacemacs/python-remove-unused-imports ()
